@@ -1,0 +1,84 @@
+plugins {
+    id 'cpp'
+    id 'google-test-test-suite'
+    id 'edu.wpi.first.wpilib.repositories.WPILibRepositoriesPlugin' version '2025.0'
+    id 'edu.wpi.first.NativeUtils' version '2026.0.1'
+    id 'edu.wpi.first.GradleVsCode' version '2.1.0'
+}
+
+ext.wpilibVersion = '2026.2.1'
+def hostOsName = System.getProperty('os.name')
+def isWindowsHost = hostOsName.startsWith('Windows')
+def hostPlatformName = hostOsName.startsWith('Mac') ? 'osxuniversal' : isWindowsHost ? 'windowsx86-64' : 'linuxx86-64'
+def cppStandardArgument = isWindowsHost ? '/std:c++20' : '-std=c++20'
+
+repositories {
+    mavenCentral()
+}
+
+if (project.hasProperty('releaseMode')) {
+    wpilibRepositories.addAllReleaseRepositories(project)
+} else {
+    wpilibRepositories.addAllDevelopmentRepositories(project)
+}
+
+apply from: 'config.gradle'
+
+nativeUtils {
+    exportsConfigs {
+        WPILibCommandsCpp {
+        }
+    }
+}
+
+model {
+    components {
+        WPILibCommandsCpp(NativeLibrarySpec) {
+            sources.cpp {
+                source {
+                    srcDir 'src/main/native/cpp'
+                    include 'frc2/**/*.cpp'
+                }
+                exportedHeaders {
+                    srcDir 'src/main/native/include'
+                }
+            }
+
+            binaries.all {
+                cppCompiler.args cppStandardArgument
+            }
+
+            nativeUtils.useRequiredLibrary(it, 'wpilib_shared')
+        }
+    }
+
+    testSuites {
+        WPILibCommandsCppTest(GoogleTestTestSuiteSpec) {
+            testing $.components.WPILibCommandsCpp
+
+            sources.cpp {
+                source {
+                    srcDir 'src/test/native/cpp'
+                    include '**/*.cpp'
+                }
+            }
+
+            binaries.all {
+                cppCompiler.args cppStandardArgument
+                lib library: 'WPILibCommandsCpp', linkage: 'static'
+                if (targetPlatform.name != hostPlatformName) {
+                    buildable = false
+                }
+            }
+
+            nativeUtils.useRequiredLibrary(it, 'wpilib_shared')
+            nativeUtils.useRequiredLibrary(it, 'googletest_static')
+        }
+    }
+}
+
+apply from: 'publish.gradle'
+
+wrapper {
+    gradleVersion = '8.14.3'
+}

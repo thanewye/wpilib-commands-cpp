@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  wrapper-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gradle/actions/wrapper-validation@v4
+
+  build-linux:
+    needs: wrapper-validation
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - container: wpilib/roborio-cross-ubuntu:2025-22.04
+            name: roboRIO
+            options: -Ponlylinuxathena
+          - container: wpilib/raspbian-cross-ubuntu:bookworm-22.04
+            name: Linux ARM32
+            options: -Ponlylinuxarm32
+          - container: wpilib/aarch64-cross-ubuntu:bookworm-22.04
+            name: Linux ARM64
+            options: -Ponlylinuxarm64
+          - container: wpilib/ubuntu-base:22.04
+            name: Linux x86-64
+            options: ''
+    name: Build ${{ matrix.name }}
+    runs-on: ubuntu-22.04
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: ./gradlew build -PreleaseMode ${{ matrix.options }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: build/allOutputs
+
+  build-desktop:
+    needs: wrapper-validation
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            name: Windows x86-64
+            architecture: x64
+          - os: macos-14
+            name: macOS universal
+            architecture: aarch64
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          architecture: ${{ matrix.architecture }}
+      - run: ./gradlew build -PreleaseMode -Pbuildalldesktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: build/allOutputs
+
+  combine:
+    needs: [build-linux, build-desktop]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: wpilibsuite/build-tools
+      - uses: actions/download-artifact@v4
+        with:
+          path: combiner/products/build/allOutputs
+      - run: rsync -a --delete combiner/products/build/allOutputs/*/* combiner/products/build/allOutputs/
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: ./gradlew publish -Pthirdparty
+        working-directory: combiner
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Maven
+          path: ~/releases

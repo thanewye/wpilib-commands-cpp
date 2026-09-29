@@ -1,0 +1,215 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish, such as 2026.2.1-1
+        required: true
+        type: string
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+env:
+  PUBLISH_VERSION: ${{ inputs.version }}
+  PUBLISH_GROUP: com.ethanye.wpilibcommands
+  ORG_GRADLE_PROJECT_publishVersion: ${{ inputs.version }}
+  ORG_GRADLE_PROJECT_publishGroup: com.ethanye.wpilibcommands
+  ORG_GRADLE_PROJECT_vendordepMavenUrl: https://thanewye.github.io/wpilib-commands-cpp/maven
+  ORG_GRADLE_PROJECT_vendordepJsonUrl: https://thanewye.github.io/wpilib-commands-cpp/WPILibCommandsCpp.json
+
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    outputs:
+      ci_run_id: ${{ steps.ci_run.outputs.run_id }}
+    permissions:
+      actions: read
+      contents: read
+      pages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gradle/actions/wrapper-validation@v4
+      - name: Verify GitHub Pages configuration
+        uses: actions/configure-pages@v5
+      - name: Validate version
+        shell: bash
+        run: |
+          if [[ ! "$PUBLISH_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid version: $PUBLISH_VERSION" >&2
+            exit 1
+          fi
+      - name: Find successful CI run for this commit
+        id: ci_run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ci_run_id="$(gh api --method GET \
+            "/repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+            -f head_sha="$GITHUB_SHA" \
+            -f status=success \
+            -F per_page=1 \
+            --jq '.workflow_runs[0].id // empty')"
+          if [[ -z "$ci_run_id" ]]; then
+            echo "No successful CI run found for commit $GITHUB_SHA." >&2
+            exit 1
+          fi
+          echo "run_id=$ci_run_id" >> "$GITHUB_OUTPUT"
+
+  combine:
+    needs: validate
+    permissions:
+      actions: read
+      contents: read
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: source
+      - uses: actions/checkout@v4
+        with:
+          repository: wpilibsuite/build-tools
+          path: combiner
+      - uses: actions/download-artifact@v4
+        with:
+          name: roboRIO
+          path: ci-artifacts/roboRIO
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.validate.outputs.ci_run_id }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: Linux ARM32
+          path: ci-artifacts/linux-arm32
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.validate.outputs.ci_run_id }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: Linux ARM64
+          path: ci-artifacts/linux-arm64
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.validate.outputs.ci_run_id }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: Linux x86-64
+          path: ci-artifacts/linux-x86-64
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.validate.outputs.ci_run_id }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: Windows x86-64
+          path: ci-artifacts/windows-x86-64
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.validate.outputs.ci_run_id }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: macOS universal
+          path: ci-artifacts/macos-universal
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.validate.outputs.ci_run_id }}
+      - name: Combine platform outputs
+        shell: bash
+        run: |
+          mkdir -p combiner/combiner/products/build/allOutputs
+          for artifact_directory in ci-artifacts/*; do
+            rsync -a "$artifact_directory/" combiner/combiner/products/build/allOutputs/
+          done
+          printf '%s\n' "$PUBLISH_VERSION" > combiner/combiner/products/build/allOutputs/version.txt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Create Maven repository
+        run: ./gradlew publish -Pthirdparty -PreleaseRepoPublish
+        working-directory: combiner/combiner
+      - name: Assemble Pages candidate
+        shell: bash
+        run: |
+          mkdir -p pages/maven
+          rsync -a "$HOME/releases/maven/release/" pages/maven/
+          jq \
+            --arg version "$PUBLISH_VERSION" \
+            --arg groupId "$PUBLISH_GROUP" \
+            --arg mavenUrl "$ORG_GRADLE_PROJECT_vendordepMavenUrl" \
+            --arg jsonUrl "$ORG_GRADLE_PROJECT_vendordepJsonUrl" \
+            '.version = $version
+              | .mavenUrls = [$mavenUrl]
+              | .jsonUrl = $jsonUrl
+              | .cppDependencies[0].groupId = $groupId
+              | .cppDependencies[0].artifactId = "wpilibcommands-cpp"
+              | .cppDependencies[0].version = $version' \
+            source/WPILibCommandsCpp.json > pages/WPILibCommandsCpp.json
+          cp pages/WPILibCommandsCpp.json "pages/WPILibCommandsCpp-$PUBLISH_VERSION.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Pages candidate
+          path: pages
+          retention-days: 7
+
+  publish:
+    needs: combine
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: Pages candidate
+          path: candidate
+      - name: Preserve releases and update Pages content
+        shell: bash
+        run: |
+          pages_source="$RUNNER_TEMP/wpilib-commands-cpp-pages"
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null; then
+            git fetch origin gh-pages
+            git worktree add --detach "$pages_source" origin/gh-pages
+            git -C "$pages_source" switch -C gh-pages
+          else
+            git worktree add --detach "$pages_source"
+            git -C "$pages_source" switch --orphan gh-pages
+          fi
+
+          group_path="${PUBLISH_GROUP//./\/}"
+          version_path="$pages_source/maven/$group_path/wpilibcommands-cpp/$PUBLISH_VERSION"
+          if [[ -e "$version_path" ]]; then
+            echo "Version $PUBLISH_VERSION is already published." >&2
+            exit 1
+          fi
+
+          mkdir -p "$pages_source/maven"
+          rsync -a candidate/maven/ "$pages_source/maven/"
+          cp candidate/WPILibCommandsCpp.json "$pages_source/WPILibCommandsCpp.json"
+          cp "candidate/WPILibCommandsCpp-$PUBLISH_VERSION.json" "$pages_source/"
+          touch "$pages_source/.nojekyll"
+
+          git -C "$pages_source" config user.name github-actions[bot]
+          git -C "$pages_source" config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git -C "$pages_source" add .
+          git -C "$pages_source" commit -m "Publish WPILib Commands C++ $PUBLISH_VERSION"
+          git -C "$pages_source" push origin gh-pages
+
+          mkdir pages-site
+          rsync -a --exclude=.git "$pages_source/" pages-site/
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: pages-site
+
+  deploy:
+    needs: publish
+    permissions:
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

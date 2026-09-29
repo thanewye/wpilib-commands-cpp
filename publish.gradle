@@ -1,0 +1,135 @@
+apply plugin: 'maven-publish'
+
+ext.licenseFiles = files(
+    "$rootDir/LICENSE",
+    "$rootDir/WPILIB-LICENSE.md",
+    "$rootDir/THIRD_PARTY_NOTICES.md"
+)
+
+def pubVersion = project.findProperty('publishVersion') ?: '2026.2.1-1'
+def artifactGroupId = project.findProperty('publishGroup') ?: 'com.ethanye.wpilibcommands'
+def baseArtifactId = 'wpilibcommands'
+def vendordepMavenUrl = project.findProperty('vendordepMavenUrl') ?: 'https://example.invalid/wpilib-commands-cpp/maven'
+def vendordepJsonUrl = project.findProperty('vendordepJsonUrl') ?: 'https://example.invalid/wpilib-commands-cpp/WPILibCommandsCpp.json'
+def templateVendorFile = 'WPILibCommandsCpp.json'
+def outputsFolder = file("$buildDir/outputs")
+def releasesRepoUrl = file("$buildDir/repos/releases")
+def zipBaseName = "_GROUP_${artifactGroupId.replace('.', '_')}_ID_${baseArtifactId}-cpp_CLS"
+
+tasks.register('outputVersion') {
+    outputs.file("$outputsFolder/version.txt")
+    doLast {
+        outputsFolder.mkdirs()
+        file("$outputsFolder/version.txt").text = pubVersion
+    }
+}
+
+tasks.register('copyAllOutputs', Copy) {
+    destinationDir = file("$buildDir/allOutputs")
+    dependsOn tasks.named('outputVersion')
+    from("$outputsFolder/version.txt")
+}
+
+ext.addTaskToCopyAllOutputs = { archiveTask ->
+    tasks.named('copyAllOutputs') {
+        dependsOn archiveTask
+        from archiveTask.archiveFile
+    }
+}
+
+tasks.register('cppHeadersZip', Zip) {
+    destinationDirectory = outputsFolder
+    archiveBaseName = zipBaseName
+    archiveClassifier = 'headers'
+
+    from(licenseFiles) {
+        into '/'
+    }
+    from('src/main/native/include') {
+        into '/'
+    }
+}
+
+tasks.register('cppSourceZip', Zip) {
+    destinationDirectory = outputsFolder
+    archiveBaseName = zipBaseName
+    archiveClassifier = 'sources'
+
+    from(licenseFiles) {
+        into '/'
+    }
+    from('src/main/native/cpp') {
+        into 'src/main/native/cpp'
+    }
+    from('src/main/native/include') {
+        into 'src/main/native/include'
+    }
+}
+
+tasks.register('vendordepJson') {
+    inputs.file(templateVendorFile)
+    inputs.property('version', pubVersion)
+    inputs.property('groupId', artifactGroupId)
+    inputs.property('mavenUrl', vendordepMavenUrl)
+    inputs.property('jsonUrl', vendordepJsonUrl)
+    outputs.file("$buildDir/vendordep/$templateVendorFile")
+    doLast {
+        copy {
+            from templateVendorFile
+            into "$buildDir/vendordep"
+            expand(
+                version: pubVersion,
+                groupId: artifactGroupId,
+                artifactId: baseArtifactId,
+                mavenUrl: vendordepMavenUrl,
+                jsonUrl: vendordepJsonUrl
+            )
+        }
+    }
+}
+
+tasks.register('vendordepJsonZip', Zip) {
+    dependsOn tasks.named('vendordepJson')
+    destinationDirectory = outputsFolder
+    archiveBaseName = 'vendordepJson'
+
+    from("$buildDir/vendordep/$templateVendorFile") {
+        into '/'
+    }
+}
+
+addTaskToCopyAllOutputs(tasks.named('cppHeadersZip').get())
+addTaskToCopyAllOutputs(tasks.named('cppSourceZip').get())
+addTaskToCopyAllOutputs(tasks.named('vendordepJsonZip').get())
+
+tasks.named('build') {
+    dependsOn tasks.named('copyAllOutputs')
+}
+
+publishing {
+    repositories {
+        maven {
+            url = releasesRepoUrl
+        }
+    }
+}
+
+model {
+    publishing {
+        def nativeArchives = createComponentZipTasks($.components, ['WPILibCommandsCpp'], zipBaseName, Zip, project, includeStandardZipFormat)
+
+        publications {
+            cpp(MavenPublication) {
+                nativeArchives.each {
+                    artifact it
+                }
+                artifact tasks.named('cppHeadersZip').get()
+                artifact tasks.named('cppSourceZip').get()
+
+                artifactId = "${baseArtifactId}-cpp"
+                groupId = artifactGroupId
+                version = pubVersion
+            }
+        }
+    }
+}
