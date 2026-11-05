@@ -1,6 +1,6 @@
 # WPILib Commands C++ (Java-ordered scheduler)
 
-A fork of the WPILib 2027.0.0-alpha-7 C++ command-based library (Commands v2, `wpi::cmd`). Its `CommandScheduler` iterates and defers work in the same order as the Java `CommandScheduler`. Every header is identical to upstream, so libraries compiled against `commandsv2` headers (for example ChoreoLib) link against this unchanged.
+A fork of the WPILib 2027.0.0-alpha-7 C++ command-based library (Commands v2, `wpi::cmd`). Its `CommandScheduler` iterates and defers work in the same order as the Java `CommandScheduler`. Its only API change from alpha 7 is `Trigger::IfTrue`, taken from upstream `main`, so libraries compiled against `commandsv2` headers (for example ChoreoLib) link against this unchanged.
 
 This is a personal project. It is not affiliated with or endorsed by WPI or FIRST.
 
@@ -20,7 +20,7 @@ These all match Java `CommandScheduler`:
 - A command stays scheduled, and keeps its requirements, until its `End` returns.
 - `Cancel` on a command that is already ending does nothing.
 
-Everything outside `CommandScheduler.cpp` is upstream source. WPILib 2027 removed `wpi::MapVector`, so `CommandScheduler.cpp` keeps a small private insertion-ordered map in its place.
+Everything outside `CommandScheduler.cpp` is upstream source: `v2027.0.0-alpha-7` plus `Trigger::IfTrue` from `main`. WPILib 2027 removed `wpi::MapVector`, so `CommandScheduler.cpp` keeps a small private insertion-ordered map in its place.
 
 ## Build and publish
 

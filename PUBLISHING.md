@@ -28,7 +28,7 @@ The Maven repository is written to `build/repos/releases`, the expanded vendorde
 ## Validate before release
 
 1. Build every advertised platform through CI.
-2. Confirm the headers are byte-identical to the upstream tag's headers.
+2. Confirm the headers are byte-identical to the upstream tag's headers, apart from `Trigger.hpp` taken from upstream `main`.
 3. Install the candidate vendordep into a clean 2027 C++ robot project in place of `CommandsV2.json` and compile desktop and Systemcore targets.
 4. Confirm the robot binary links `libWPILibCommandsCpp` and not `libcommandsv2`.
 
