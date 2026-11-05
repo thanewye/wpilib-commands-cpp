@@ -1,0 +1,33 @@
+{
+  "fileName": "WPILibCommandsCpp.json",
+  "name": "WPILib Commands C++ (Java-ordered scheduler)",
+  "version": "2027.0.0-alpha-7-1",
+  "wpilibYear": "2027_alpha7",
+  "uuid": "2ad0f3e9-9374-4e35-bf5f-bd23e24c88e0",
+  "mavenUrls": [
+    "https://thanewye.github.io/wpilib-commands-cpp/maven"
+  ],
+  "jsonUrl": "https://thanewye.github.io/wpilib-commands-cpp/WPILibCommandsCpp-2027.json",
+  "javaDependencies": [],
+  "jniDependencies": [],
+  "cppDependencies": [
+    {
+      "groupId": "com.ethanye.wpilibcommands",
+      "artifactId": "wpilibcommands-cpp",
+      "version": "2027.0.0-alpha-7-1",
+      "libName": "WPILibCommandsCpp",
+      "headerClassifier": "headers",
+      "sourcesClassifier": "sources",
+      "sharedLibrary": true,
+      "skipInvalidPlatforms": true,
+      "binaryPlatforms": [
+        "linuxsystemcore",
+        "linuxarm64",
+        "windowsx86-64",
+        "windowsarm64",
+        "linuxx86-64",
+        "osxuniversal"
+      ]
+    }
+  ]
+}

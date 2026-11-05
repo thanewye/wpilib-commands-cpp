@@ -3,11 +3,11 @@
   <groupId>com.ethanye.wpilibcommands</groupId>
   <artifactId>wpilibcommands-cpp</artifactId>
   <versioning>
-    <latest>2026.2.1-1</latest>
-    <release>2026.2.1-1</release>
+    <latest>2027.0.0-alpha-7-1</latest>
+    <release>2027.0.0-alpha-7-1</release>
     <versions>
-      <version>2026.2.1-1</version>
+      <version>2027.0.0-alpha-7-1</version>
     </versions>
-    <lastUpdated>20260929083000</lastUpdated>
+    <lastUpdated>20261105083651</lastUpdated>
   </versioning>
 </metadata>
