@@ -1,16 +1,16 @@
 plugins {
     id 'cpp'
     id 'google-test-test-suite'
-    id 'edu.wpi.first.wpilib.repositories.WPILibRepositoriesPlugin' version '2025.0'
-    id 'edu.wpi.first.NativeUtils' version '2026.0.1'
-    id 'edu.wpi.first.GradleVsCode' version '2.1.0'
+    id 'org.wpilib.WPILibRepositoriesPlugin' version '2027.0.0'
+    id 'org.wpilib.NativeUtils' version '2027.14.3'
+    id 'org.wpilib.GradleVsCode' version '2027.0.0'
 }
 
-ext.wpilibVersion = '2026.2.1'
+ext.wpilibVersion = '2027.0.0-alpha-7'
 def hostOsName = System.getProperty('os.name')
 def isWindowsHost = hostOsName.startsWith('Windows')
 def hostPlatformName = hostOsName.startsWith('Mac') ? 'osxuniversal' : isWindowsHost ? 'windowsx86-64' : 'linuxx86-64'
-def cppStandardArgument = isWindowsHost ? '/std:c++20' : '-std=c++20'
+def cppStandardArgument = isWindowsHost ? '/std:c++23preview' : '-std=c++23'
 
 repositories {
     mavenCentral()
@@ -37,7 +37,7 @@ model {
             sources.cpp {
                 source {
                     srcDir 'src/main/native/cpp'
-                    include 'frc2/**/*.cpp'
+                    include '**/*.cpp'
                 }
                 exportedHeaders {
                     srcDir 'src/main/native/include'
@@ -72,7 +72,7 @@ model {
             }
 
             nativeUtils.useRequiredLibrary(it, 'wpilib_shared')
-            nativeUtils.useRequiredLibrary(it, 'googletest_static')
+            nativeUtils.useRequiredLibrary(it, 'catch2_static')
         }
     }
 }
@@ -80,5 +80,5 @@ model {
 apply from: 'publish.gradle'
 
 wrapper {
-    gradleVersion = '8.14.3'
+    gradleVersion = '9.4.1'
 }

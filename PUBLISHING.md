@@ -4,7 +4,7 @@ A release consists of immutable Maven artifacts and a `WPILibCommandsCpp.json` v
 
 ## Versioning
 
-Versions are `<WPILib version>-<fork revision>`, for example `2026.2.1-1`. Rebase onto a new WPILib release by replacing `src/main/native/{cpp,include}/frc2` with that tag's sources, generated sources and headers, then reapplying the `CommandScheduler.cpp` changes.
+Versions are `<WPILib version>-<fork revision>`, for example `2027.0.0-alpha-7-1`. Rebase onto a new WPILib release by replacing `src/main/native/{cpp,include}` with that tag's `commandsv2` sources, generated sources and headers, then reapplying the `CommandScheduler.cpp` changes.
 
 ## Before the first release
 
@@ -17,10 +17,10 @@ Versions are `<WPILib version>-<fork revision>`, for example `2026.2.1-1`. Rebas
 
 ```bash
 ./gradlew clean build publish -PreleaseMode \
-  -PpublishVersion=2026.2.1-1 \
+  -PpublishVersion=2027.0.0-alpha-7-1 \
   -PpublishGroup=com.ethanye.wpilibcommands \
   -PvendordepMavenUrl=https://thanewye.github.io/wpilib-commands-cpp/maven \
-  -PvendordepJsonUrl=https://thanewye.github.io/wpilib-commands-cpp/WPILibCommandsCpp.json
+  -PvendordepJsonUrl=https://thanewye.github.io/wpilib-commands-cpp/WPILibCommandsCpp-2027.json
 ```
 
 The Maven repository is written to `build/repos/releases`, the expanded vendordep to `build/vendordep/WPILibCommandsCpp.json`, and the platform archives to `build/allOutputs`.
@@ -29,9 +29,9 @@ The Maven repository is written to `build/repos/releases`, the expanded vendorde
 
 1. Build every advertised platform through CI.
 2. Confirm the headers are byte-identical to the upstream tag's headers.
-3. Install the candidate vendordep into a clean 2026 C++ robot project in place of `WPILibNewCommands.json` and compile desktop and roboRIO targets.
-4. Confirm the robot binary links `libWPILibCommandsCpp` and not `libwpilibNewCommands`.
+3. Install the candidate vendordep into a clean 2027 C++ robot project in place of `CommandsV2.json` and compile desktop and Systemcore targets.
+4. Confirm the robot binary links `libWPILibCommandsCpp` and not `libcommandsv2`.
 
 ## Publish
 
-Run the `Publish` workflow with a new version. It preserves existing Maven versions, updates the stable `WPILibCommandsCpp.json`, writes a versioned JSON snapshot, and deploys the combined repository through GitHub Pages.
+Run the `Publish` workflow with a new version. It preserves existing Maven versions, updates `WPILibCommandsCpp-2027.json`, writes a versioned JSON snapshot, and deploys the combined repository through GitHub Pages.

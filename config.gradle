@@ -1,15 +1,24 @@
 nativeUtils.addWpiNativeUtils()
-nativeUtils.withCrossRoboRIO()
-nativeUtils.withCrossLinuxArm32()
+nativeUtils.withCrossSystemCore()
 nativeUtils.withCrossLinuxArm64()
 
 nativeUtils {
     wpi {
         configureDependencies {
             wpiVersion = wpilibVersion
-            opencvYear = 'frc2025'
-            niLibVersion = '2026.1.2'
-            opencvVersion = '4.10.0-2'
+            mrcLibVersion = '2027.1.0-alpha-1-116-g5288562'
+            opencvVersion = '4.13.0-3'
+        }
+    }
+
+    nativeDependencyContainer {
+        catch2_static(getNativeDependencyTypeClass('WPIStaticMavenDependency')) {
+            groupId = 'org.wpilib.thirdparty.catch2'
+            artifactId = 'catch2-cpp'
+            headerClassifier = 'headers'
+            ext = 'zip'
+            version = wpilibVersion
+            targetPlatforms.addAll(nativeUtils.wpi.platforms.allPlatforms)
         }
     }
 }

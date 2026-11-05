@@ -2,7 +2,7 @@
     "fileName": "WPILibCommandsCpp.json",
     "name": "WPILib Commands C++ (Java-ordered scheduler)",
     "version": "${version}",
-    "frcYear": "2026",
+    "wpilibYear": "2027_alpha7",
     "uuid": "2ad0f3e9-9374-4e35-bf5f-bd23e24c88e0",
     "mavenUrls": [
         "${mavenUrl}"
@@ -21,11 +21,11 @@
             "sharedLibrary": true,
             "skipInvalidPlatforms": true,
             "binaryPlatforms": [
-                "windowsx86-64",
+                "linuxsystemcore",
                 "linuxarm64",
+                "windowsx86-64",
+                "windowsarm64",
                 "linuxx86-64",
-                "linuxathena",
-                "linuxarm32",
                 "osxuniversal"
             ]
         }

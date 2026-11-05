@@ -17,26 +17,27 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - container: wpilib/roborio-cross-ubuntu:2025-22.04
-            name: roboRIO
-            options: -Ponlylinuxathena
-          - container: wpilib/raspbian-cross-ubuntu:bookworm-22.04
-            name: Linux ARM32
-            options: -Ponlylinuxarm32
-          - container: wpilib/aarch64-cross-ubuntu:bookworm-22.04
-            name: Linux ARM64
+          - name: Systemcore
+            toolchain: installSystemCoreToolchain
+            options: -Ponlylinuxsystemcore
+          - name: Linux ARM64
+            toolchain: installArm64Toolchain
             options: -Ponlylinuxarm64
-          - container: wpilib/ubuntu-base:22.04
-            name: Linux x86-64
+          - name: Linux x86-64
+            toolchain: ''
             options: ''
     name: Build ${{ matrix.name }}
-    runs-on: ubuntu-22.04
-    container: ${{ matrix.container }}
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - if: matrix.toolchain != ''
+        run: ./gradlew ${{ matrix.toolchain }}
       - run: ./gradlew build -PreleaseMode ${{ matrix.options }}
       - uses: actions/upload-artifact@v4
         with:
@@ -52,9 +53,15 @@ jobs:
           - os: windows-2022
             name: Windows x86-64
             architecture: x64
-          - os: macos-14
+            options: -Pbuildalldesktop
+          - os: windows-2022
+            name: Windows ARM64
+            architecture: x64
+            options: -Pbuildwinarm64 -Ponlywindowsarm64
+          - os: macos-15
             name: macOS universal
             architecture: aarch64
+            options: -Pbuildalldesktop
     name: Build ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     steps:
@@ -64,9 +71,9 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 25
           architecture: ${{ matrix.architecture }}
-      - run: ./gradlew build -PreleaseMode -Pbuildalldesktop
+      - run: ./gradlew build -PreleaseMode ${{ matrix.options }}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
@@ -82,11 +89,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: combiner/products/build/allOutputs
+          pattern: '{Systemcore,Linux ARM64,Linux x86-64,Windows x86-64,Windows ARM64,macOS universal}'
       - run: rsync -a --delete combiner/products/build/allOutputs/*/* combiner/products/build/allOutputs/
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 25
       - run: ./gradlew publish -Pthirdparty
         working-directory: combiner
       - uses: actions/upload-artifact@v4

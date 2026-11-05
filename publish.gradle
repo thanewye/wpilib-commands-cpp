@@ -6,11 +6,11 @@ ext.licenseFiles = files(
     "$rootDir/THIRD_PARTY_NOTICES.md"
 )
 
-def pubVersion = project.findProperty('publishVersion') ?: '2026.2.1-1'
+def pubVersion = project.findProperty('publishVersion') ?: '2027.0.0-alpha-7-1'
 def artifactGroupId = project.findProperty('publishGroup') ?: 'com.ethanye.wpilibcommands'
 def baseArtifactId = 'wpilibcommands'
 def vendordepMavenUrl = project.findProperty('vendordepMavenUrl') ?: 'https://example.invalid/wpilib-commands-cpp/maven'
-def vendordepJsonUrl = project.findProperty('vendordepJsonUrl') ?: 'https://example.invalid/wpilib-commands-cpp/WPILibCommandsCpp.json'
+def vendordepJsonUrl = project.findProperty('vendordepJsonUrl') ?: 'https://example.invalid/wpilib-commands-cpp/WPILibCommandsCpp-2027.json'
 def templateVendorFile = 'WPILibCommandsCpp.json'
 def outputsFolder = file("$buildDir/outputs")
 def releasesRepoUrl = file("$buildDir/repos/releases")

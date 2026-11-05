@@ -1,6 +1,6 @@
 # WPILib Commands C++ (Java-ordered scheduler)
 
-A fork of the WPILib 2026.2.1 C++ command-based library (`frc2`). Its `CommandScheduler` iterates and defers work in the same order as the Java `CommandScheduler`. Every header is identical to upstream, so libraries compiled against `wpilibNewCommands` headers (for example ChoreoLib) link against this unchanged.
+A fork of the WPILib 2027.0.0-alpha-7 C++ command-based library (Commands v2, `wpi::cmd`). Its `CommandScheduler` iterates and defers work in the same order as the Java `CommandScheduler`. Every header is identical to upstream, so libraries compiled against `commandsv2` headers (for example ChoreoLib) link against this unchanged.
 
 This is a personal project. It is not affiliated with or endorsed by WPI or FIRST.
 
@@ -20,26 +20,33 @@ These all match Java `CommandScheduler`:
 - A command stays scheduled, and keeps its requirements, until its `End` returns.
 - `Cancel` on a command that is already ending does nothing.
 
-Everything outside `CommandScheduler.cpp` is upstream source.
+Everything outside `CommandScheduler.cpp` is upstream source. WPILib 2027 removed `wpi::MapVector`, so `CommandScheduler.cpp` keeps a small private insertion-ordered map in its place.
 
 ## Build and publish
 
 ```bash
 ./gradlew build
 ./gradlew clean build publish -PreleaseMode \
-  -PpublishVersion=2026.2.1-1 \
+  -PpublishVersion=2027.0.0-alpha-7-1 \
   -PpublishGroup=com.example.wpilibcommands \
   -PvendordepMavenUrl=https://example.github.io/wpilib-commands-cpp/maven \
-  -PvendordepJsonUrl=https://example.github.io/wpilib-commands-cpp/WPILibCommandsCpp.json
+  -PvendordepJsonUrl=https://example.github.io/wpilib-commands-cpp/WPILibCommandsCpp-2027.json
 ```
 
 The Maven repository is written to `build/repos/releases` and the expanded vendordep to `build/vendordep/WPILibCommandsCpp.json`. See [PUBLISHING.md](PUBLISHING.md).
 
 ## Use in robot code
 
-Delete `vendordeps/WPILibNewCommands.json` and install `WPILibCommandsCpp.json` in its place. The `frc2` includes and API stay the same. Keeping both vendordeps links two copies of `frc2` and is not supported.
+Choose the vendordep that matches your robot project's WPILib version:
 
-The vendordep ships only the C++ library. Java robot projects should keep using WPILib's own `WPILibNewCommands.json`.
+| WPILib version | Vendordep URL | Source branch |
+| --- | --- | --- |
+| 2026 | [WPILibCommandsCpp.json](https://thanewye.github.io/wpilib-commands-cpp/WPILibCommandsCpp.json) | `main` |
+| 2027.0.0-alpha-7 | [WPILibCommandsCpp-2027.json](https://thanewye.github.io/wpilib-commands-cpp/WPILibCommandsCpp-2027.json) | `2027` |
+
+On 2027, delete `vendordeps/CommandsV2.json` and install `WPILibCommandsCpp-2027.json` in its place. The `wpi/commands2` includes and API stay the same. Keeping both vendordeps links two copies of the library and is not supported.
+
+The vendordep ships only the C++ library. Java robot projects should keep using WPILib's own `CommandsV2.json`.
 
 ## License
 
